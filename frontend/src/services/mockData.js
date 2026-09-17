@@ -1,0 +1,106 @@
+export const INITIAL_POLLS = [
+  {
+    id: 'poll-1',
+    question: "What's your favorite programming language?",
+    description: "Vote for your preferred language for modern backend & frontend development.",
+    status: 'active', // 'active' | 'closed'
+    createdAt: 'Today at 09:30 AM',
+    createdDate: 'May 18, 2026',
+    expiry: '24 hours',
+    allowMultiple: false,
+    showLiveResults: true,
+    totalVotes: 110,
+    options: [
+      { id: 'opt-1', text: 'Java', votes: 62, percentage: 48, color: '#3b82f6' },
+      { id: 'opt-2', text: 'Python', votes: 39, percentage: 30, color: '#8b5cf6' },
+      { id: 'opt-3', text: 'JavaScript', votes: 19, percentage: 15, color: '#ec4899' },
+      { id: 'opt-4', text: 'Go', votes: 9, percentage: 7, color: '#10b981' },
+    ],
+  },
+  {
+    id: 'poll-2',
+    question: "Which frontend stack do you prefer for 2026?",
+    description: "Help benchmark the developer community's choice for interactive web applications.",
+    status: 'active',
+    createdAt: 'Yesterday',
+    createdDate: 'May 17, 2026',
+    expiry: '7 days',
+    allowMultiple: false,
+    showLiveResults: true,
+    totalVotes: 320,
+    options: [
+      { id: 'opt-21', text: 'React + Vite', votes: 172, percentage: 54, color: '#06b6d4' },
+      { id: 'opt-22', text: 'Next.js App Router', votes: 96, percentage: 30, color: '#8b5cf6' },
+      { id: 'opt-23', text: 'Vue 3 / Nuxt', votes: 32, percentage: 10, color: '#10b981' },
+      { id: 'opt-24', text: 'SvelteKit', votes: 20, percentage: 6, color: '#f59e0b' },
+    ],
+  },
+  {
+    id: 'poll-3',
+    question: "Should remote/hybrid work remain standard for tech teams?",
+    description: "Share your experience with engineering team productivity and culture.",
+    status: 'active',
+    createdAt: '3 days ago',
+    createdDate: 'May 15, 2026',
+    expiry: 'Never',
+    allowMultiple: false,
+    showLiveResults: true,
+    totalVotes: 680,
+    options: [
+      { id: 'opt-31', text: 'Fully Remote', votes: 442, percentage: 65, color: '#8b5cf6' },
+      { id: 'opt-32', text: 'Flexible Hybrid (1-2 days office)', votes: 190, percentage: 28, color: '#3b82f6' },
+      { id: 'opt-33', text: 'Office First', votes: 48, percentage: 7, color: '#ef4444' },
+    ],
+  },
+  {
+    id: 'poll-4',
+    question: "Preferred Cloud Infrastructure for Microservices",
+    description: "Which infrastructure platform provides the best balance of cost and developer velocity?",
+    status: 'closed',
+    createdAt: '1 week ago',
+    createdDate: 'May 10, 2026',
+    expiry: 'Expired',
+    allowMultiple: false,
+    showLiveResults: true,
+    totalVotes: 310,
+    options: [
+      { id: 'opt-41', text: 'AWS (ECS / EKS)', votes: 161, percentage: 52, color: '#f59e0b' },
+      { id: 'opt-42', text: 'Google Cloud Platform (GCP)', votes: 105, percentage: 34, color: '#3b82f6' },
+      { id: 'opt-43', text: 'Microsoft Azure', votes: 44, percentage: 14, color: '#06b6d4' },
+    ],
+  },
+];
+
+export const DASHBOARD_STATS = {
+  totalPolls: 12,
+  activePolls: 5,
+  totalVotes: '1,420',
+  responsesToday: 184,
+  completionRate: '94.2%',
+  avgResponseTime: '18s',
+};
+
+export const ANALYTICS_DATA = {
+  votesOverTime: [
+    { label: '06:00', votes: 8 },
+    { label: '08:00', votes: 24 },
+    { label: '10:00', votes: 49 },
+    { label: '12:00', votes: 76 },
+    { label: '14:00', votes: 68 },
+    { label: '16:00', votes: 95 },
+    { label: '18:00', votes: 82 },
+    { label: '20:00', votes: 60 },
+    { label: '22:00', votes: 34 },
+  ],
+  devices: [
+    { name: 'Desktop Browsers', percentage: 62, count: 880, color: '#8b5cf6' },
+    { name: 'Mobile Devices', percentage: 31, count: 440, color: '#3b82f6' },
+    { name: 'Tablets & Others', percentage: 7, count: 100, color: '#06b6d4' },
+  ],
+  sources: [
+    { channel: 'Direct Share Link', percentage: 46 },
+    { channel: 'Slack / Teams', percentage: 32 },
+    { channel: 'Twitter / LinkedIn', percentage: 16 },
+    { channel: 'QR Code Scans', percentage: 6 },
+  ],
+};
