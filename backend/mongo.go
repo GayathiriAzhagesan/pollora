@@ -14,36 +14,41 @@ import (
 var client *mongo.Client
 var db *mongo.Database
 var usersCollection *mongo.Collection
+var pollsCollection *mongo.Collection
 
 func connectDB() {
 	uri := os.Getenv("MONGO_URI")
 	if uri == "" {
-		uri = "mongodb+srv://gayathrig12001_db_user:gayathiri1719@live-poll-cluster.rebwgqc.mongodb.net/?appName=live-poll-cluster"
+		uri = "mongodb+srv://gayathrig12001_db_user:Gayathiri1719@live-poll-cluster.rebwgqc.mongodb.net/?appName=live-poll-cluster"
 	}
 
 	var err error
 	client, err = mongo.Connect(options.Client().ApplyURI(uri))
 	if err != nil {
-		panic(err)
+		fmt.Printf("❌ MongoDB initialization error: %v\n", err)
+		return
 	}
 
-	pingCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	err = client.Ping(pingCtx, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	// Select database
+	// Select database and collections
 	db = client.Database("livepoll")
 	usersCollection = db.Collection("users")
+	pollsCollection = db.Collection("polls")
 
-	fmt.Println("✅ Connected to MongoDB Atlas")
-	fmt.Println("✅ Using Database: livepoll")
-	fmt.Println("✅ Using Collection: users")
+	fmt.Println("✅ Configured Database: livepoll")
+	fmt.Println("✅ Configured Collection: users")
+	fmt.Println("✅ Configured Collection: polls")
 
-	ensureIndexes()
+	// Verify connectivity with ping
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err = client.Ping(pingCtx, nil); err != nil {
+		fmt.Printf("⚠️ Warning: Initial MongoDB Atlas ping failed: %v\n", err)
+		fmt.Println("ℹ️ Note: If Atlas blocks the connection, verify your IP is allowed in MongoDB Atlas > Network Access (or allow 0.0.0.0/0).")
+	} else {
+		fmt.Println("✅ Connected to MongoDB Atlas successfully")
+		ensureIndexes()
+	}
 }
 
 func ensureIndexes() {
@@ -62,4 +67,13 @@ func ensureIndexes() {
 		fmt.Println("✅ Unique index on users.email verified")
 	}
 }
+
+// getPollsCollection returns the initialized polls collection
+func getPollsCollection() *mongo.Collection {
+	if pollsCollection == nil && db != nil {
+		pollsCollection = db.Collection("polls")
+	}
+	return pollsCollection
+}
+
 

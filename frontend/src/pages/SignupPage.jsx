@@ -12,7 +12,9 @@ import {
   ArrowRightIcon,
   RadioIcon,
   CheckCircleIcon,
+  SparklesIcon,
 } from '../assets/icons';
+import { PolloraIcon } from '../components/common/Logo';
 
 export const SignupPage = ({ onNavigate }) => {
   const [fullName, setFullName] = useState('');
@@ -48,16 +50,47 @@ export const SignupPage = ({ onNavigate }) => {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      showToast('Account created successfully! Welcome to LivePoll.', 'success');
+    try {
+      const response = await fetch('http://localhost:8080/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: fullName.trim(),
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showToast(data.error || 'Failed to create account. Please try again.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // Store auth credentials as required
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // Notify Navbar and app of auth change
+      window.dispatchEvent(new Event('authChange'));
+
+      showToast(`Account created successfully! Welcome, ${data.user?.name || 'User'}.`, 'success');
       onNavigate('dashboard');
-    }, 600);
+    } catch (err) {
+      console.error('Signup error:', err);
+      showToast('Unable to connect to registration server. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,9 +99,12 @@ export const SignupPage = ({ onNavigate }) => {
 
       <div className="auth-card-container animate-fade-in">
         <div className="auth-brand-header">
-          <div className="brand-icon-wrapper auth-logo" onClick={() => onNavigate('landing')}>
-            <RadioIcon size={24} className="brand-icon" />
+          <div className="brand-icon-wrapper auth-logo pollora-icon-wrapper" onClick={() => onNavigate('landing')} role="button" tabIndex={0}>
+            <PolloraIcon size={28} />
           </div>
+          <span className="brand-name font-display text-xl mt-2 block">
+            Poll<span className="brand-gradient">ora</span>
+          </span>
         </div>
 
         <Card className="auth-card glass-panel" glow>

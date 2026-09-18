@@ -1,0 +1,11 @@
+# Environment files
+.env
+.env.*
+
+# Go binaries
+*.exe
+*.exe~
+*.out
+
+# Backup files
+*.backup

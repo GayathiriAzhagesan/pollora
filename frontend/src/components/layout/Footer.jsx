@@ -1,17 +1,17 @@
 import React from 'react';
-import { RadioIcon } from '../../assets/icons';
+import { PolloraIcon } from '../common/Logo';
 
 export const Footer = ({ onNavigate }) => {
   return (
     <footer className="footer-container">
       <div className="footer-inner">
         <div className="footer-brand-col">
-          <div className="footer-brand" onClick={() => onNavigate && onNavigate('landing')}>
-            <div className="brand-icon-wrapper">
-              <RadioIcon size={18} className="brand-icon" />
+          <div className="footer-brand pollora-brand" onClick={() => onNavigate && onNavigate('landing')} role="button" tabIndex={0}>
+            <div className="brand-icon-wrapper pollora-icon-wrapper">
+              <PolloraIcon size={20} />
             </div>
             <span className="brand-name">
-              Live<span className="brand-gradient">Poll</span>
+              Poll<span className="brand-gradient">ora</span>
             </span>
           </div>
           <p className="footer-desc">
@@ -55,7 +55,7 @@ export const Footer = ({ onNavigate }) => {
       </div>
 
       <div className="footer-bottom">
-        <p>© {new Date().getFullYear()} LivePoll Inc. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} Pollora Inc. All rights reserved.</p>
         <div className="footer-status-pill">
           <span className="pulse-dot green" />
           <span>All Systems Operational</span>

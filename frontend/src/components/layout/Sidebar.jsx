@@ -9,6 +9,7 @@ import {
   RadioIcon,
   ClockIcon,
 } from '../../assets/icons';
+import { PolloraIcon } from '../common/Logo';
 
 export const Sidebar = ({ currentView, onNavigate, onFilterChange, currentFilter }) => {
   const navItems = [
@@ -18,22 +19,42 @@ export const Sidebar = ({ currentView, onNavigate, onFilterChange, currentFilter
     { id: 'analytics', label: 'Analytics', icon: TrendingUpIcon, action: () => onNavigate('analytics') },
   ];
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.dispatchEvent(new Event('authChange'));
+    onNavigate('landing');
+  };
+
+  const user = (() => {
+    try {
+      const u = localStorage.getItem('user');
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const initials = user?.name
+    ? user.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
+    : 'U';
+
   const bottomItems = [
     { id: 'profile', label: 'Profile', icon: UserIcon, action: () => onNavigate('dashboard') },
     { id: 'settings', label: 'Settings', icon: SettingsIcon, action: () => onNavigate('dashboard') },
-    { id: 'logout', label: 'Logout', icon: LogOutIcon, action: () => onNavigate('login'), danger: true },
+    { id: 'logout', label: 'Logout', icon: LogOutIcon, action: handleLogout, danger: true },
   ];
 
   return (
     <aside className="app-sidebar glass-panel">
       {/* Sidebar Header */}
-      <div className="sidebar-brand" onClick={() => onNavigate('landing')} role="button" tabIndex={0}>
-        <div className="brand-icon-wrapper">
-          <RadioIcon size={20} className="brand-icon" />
+      <div className="sidebar-brand pollora-brand" onClick={() => onNavigate('landing')} role="button" tabIndex={0}>
+        <div className="brand-icon-wrapper pollora-icon-wrapper">
+          <PolloraIcon size={22} />
         </div>
         <div className="sidebar-brand-text">
           <span className="brand-name">
-            Live<span className="brand-gradient">Poll</span>
+            Poll<span className="brand-gradient">ora</span>
           </span>
           <span className="sidebar-brand-sub">Workspace</span>
         </div>
@@ -85,14 +106,14 @@ export const Sidebar = ({ currentView, onNavigate, onFilterChange, currentFilter
         </ul>
 
         {/* User Card */}
-        <div className="sidebar-user-card">
+        <div className="sidebar-user-card" onClick={() => onNavigate('dashboard')} role="button" tabIndex={0}>
           <div className="sidebar-avatar">
-            <span>JD</span>
+            <span>{initials}</span>
             <span className="avatar-status-dot" />
           </div>
           <div className="sidebar-user-info">
-            <span className="user-name">John Doe</span>
-            <span className="user-role">john@example.com</span>
+            <span className="user-name">{user?.name || 'User'}</span>
+            <span className="user-role">{user?.email || 'Active Account'}</span>
           </div>
         </div>
       </div>

@@ -8,9 +8,16 @@ import {
   CheckIcon,
   QrCodeIcon,
   ShareIcon,
-  ExternalLinkIcon,
   GlobeIcon,
 } from '../../assets/icons';
+import {
+  WhatsAppIcon,
+  LinkedInIcon,
+  FacebookIcon,
+  XTwitterIcon,
+  EmailShareIcon,
+  CopyShareIcon,
+} from '../common/Logo';
 
 export const ShareModal = ({ isOpen, onClose, poll }) => {
   const [copied, setCopied] = useState(false);
@@ -19,20 +26,28 @@ export const ShareModal = ({ isOpen, onClose, poll }) => {
 
   if (!poll) return null;
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://livepoll.example.com';
-  const shareUrl = `${origin}/#poll-${poll.id}`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+  // Generate clean React Router URL, while preserving backward compatibility
+  const shareUrl = `${origin}/poll/${poll.id}`;
 
   const handleCopy = async () => {
     try {
-      if (navigator.clipboard) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(shareUrl);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = shareUrl;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
       }
       setCopied(true);
-      showToast('Poll link copied to clipboard!', 'success');
+      showToast('Link copied!', 'success');
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      showToast('Poll link copied!', 'success');
       setCopied(true);
+      showToast('Link copied!', 'success');
       setTimeout(() => setCopied(false), 2500);
     }
   };
@@ -41,7 +56,7 @@ export const ShareModal = ({ isOpen, onClose, poll }) => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: poll.question,
+          title: `Pollora: ${poll.question}`,
           text: `Vote on this live poll: "${poll.question}"`,
           url: shareUrl,
         });
@@ -54,6 +69,45 @@ export const ShareModal = ({ isOpen, onClose, poll }) => {
       handleCopy();
     }
   };
+
+  // Pre-configured dynamic social share links
+  const socialChannels = [
+    {
+      id: 'whatsapp',
+      name: 'WhatsApp',
+      icon: WhatsAppIcon,
+      url: `https://api.whatsapp.com/send?text=${encodeURIComponent(`Vote on this live poll: "${poll.question}" — ${shareUrl}`)}`,
+      ariaLabel: 'Share poll on WhatsApp',
+    },
+    {
+      id: 'linkedin',
+      name: 'LinkedIn',
+      icon: LinkedInIcon,
+      url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
+      ariaLabel: 'Share poll on LinkedIn',
+    },
+    {
+      id: 'facebook',
+      name: 'Facebook',
+      icon: FacebookIcon,
+      url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+      ariaLabel: 'Share poll on Facebook',
+    },
+    {
+      id: 'x',
+      name: 'X',
+      icon: XTwitterIcon,
+      url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Vote on this live poll: "${poll.question}"`)}&url=${encodeURIComponent(shareUrl)}`,
+      ariaLabel: 'Share poll on X',
+    },
+    {
+      id: 'email',
+      name: 'Email',
+      icon: EmailShareIcon,
+      url: `mailto:?subject=${encodeURIComponent(`Live Poll: ${poll.question}`)}&body=${encodeURIComponent(`Hi,\n\nPlease cast your vote in this live poll:\n"${poll.question}"\n\nLink to vote: ${shareUrl}\n\nThank you!`)}`,
+      ariaLabel: 'Share poll via Email',
+    },
+  ];
 
   return (
     <Modal
@@ -79,6 +133,7 @@ export const ShareModal = ({ isOpen, onClose, poll }) => {
               value={shareUrl}
               className="share-url-input"
               onClick={(e) => e.target.select()}
+              aria-label="Poll URL"
             />
           </div>
           <Button
@@ -86,26 +141,69 @@ export const ShareModal = ({ isOpen, onClose, poll }) => {
             icon={copied ? CheckIcon : CopyIcon}
             onClick={handleCopy}
             className="share-copy-btn"
+            aria-label="Copy poll link"
           >
-            {copied ? 'Copied!' : 'Copy Link'}
+            {copied ? 'Link copied!' : 'Copy Link'}
           </Button>
         </div>
 
-        {/* Action Buttons: Share & QR Code */}
+        {/* Social Channels Row */}
+        <div className="share-social-platform-section">
+          <span className="share-social-title">Share to Channels</span>
+          <div className="share-social-grid" role="group" aria-label="Social media sharing options">
+            {socialChannels.map((channel) => {
+              const ChannelIcon = channel.icon;
+              return (
+                <a
+                  key={channel.id}
+                  href={channel.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`share-channel-btn share-channel-${channel.id}`}
+                  title={`Share on ${channel.name}`}
+                  aria-label={channel.ariaLabel}
+                >
+                  <div className="share-channel-icon-wrapper">
+                    <ChannelIcon size={20} />
+                  </div>
+                  <span className="share-channel-name">{channel.name}</span>
+                </a>
+              );
+            })}
+
+            {/* Dedicated Copy Button in the Social Grid */}
+            <button
+              type="button"
+              onClick={handleCopy}
+              className={`share-channel-btn share-channel-copy ${copied ? 'copied' : ''}`}
+              title="Copy poll URL to clipboard"
+              aria-label="Copy poll URL to clipboard"
+            >
+              <div className="share-channel-icon-wrapper">
+                {copied ? <CheckIcon size={20} /> : <CopyShareIcon size={20} />}
+              </div>
+              <span className="share-channel-name">{copied ? 'Copied!' : 'Copy Link'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Action Buttons: Native Share & QR Code */}
         <div className="share-actions-row">
           <Button
             variant="secondary"
             icon={ShareIcon}
             fullWidth
             onClick={handleNativeShare}
+            aria-label="Open mobile system share sheet"
           >
-            Share to Apps
+            System Share Sheet
           </Button>
           <Button
             variant={showQR ? 'outline' : 'secondary'}
             icon={QrCodeIcon}
             fullWidth
             onClick={() => setShowQR(!showQR)}
+            aria-label={showQR ? 'Hide QR Code' : 'Display QR Code for mobile scanning'}
           >
             {showQR ? 'Hide QR Code' : 'Show QR Code'}
           </Button>
@@ -118,38 +216,6 @@ export const ShareModal = ({ isOpen, onClose, poll }) => {
             <p className="share-qr-hint">Scan with any mobile camera to open instant voting</p>
           </div>
         )}
-
-        {/* Social Quick Share Shortcuts */}
-        <div className="share-social-row">
-          <span className="share-social-title">Quick Share:</span>
-          <a
-            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Vote in this poll: ${poll.question}`)}&url=${encodeURIComponent(shareUrl)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="share-social-btn"
-            title="Share on X / Twitter"
-          >
-            X (Twitter)
-          </a>
-          <a
-            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="share-social-btn"
-            title="Share on LinkedIn"
-          >
-            LinkedIn
-          </a>
-          <a
-            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Vote on LivePoll: ${poll.question} - ${shareUrl}`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="share-social-btn"
-            title="Share on WhatsApp"
-          >
-            WhatsApp
-          </a>
-        </div>
       </div>
     </Modal>
   );

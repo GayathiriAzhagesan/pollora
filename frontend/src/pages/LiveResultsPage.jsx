@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
@@ -17,34 +18,159 @@ import {
 } from '../assets/icons';
 
 export const LiveResultsPage = ({ onNavigate }) => {
-  const { activePoll, openShareModal } = usePolls();
+  const { activePoll, polls, getPollById, fetchPollById, openShareModal, setActivePollId } = usePolls();
   const { showToast } = useToast();
+  const { pollId: paramPollId } = useParams() || {};
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState('Just now');
+  const [wsConnected, setWsConnected] = useState(false);
 
-  // Use active poll or reference values from prompt
-  const poll = activePoll || {
-    id: 'poll-1',
-    question: "What's your favorite programming language?",
-    totalVotes: 110,
-    options: [
-      { id: 'opt-1', text: 'Java', votes: 62, percentage: 48, color: '#3b82f6' },
-      { id: 'opt-2', text: 'Python', votes: 39, percentage: 30, color: '#8b5cf6' },
-      { id: 'opt-3', text: 'JavaScript', votes: 19, percentage: 15, color: '#ec4899' },
-      { id: 'opt-4', text: 'Go', votes: 9, percentage: 7, color: '#10b981' },
-    ],
-  };
+  // Extract hash parameter if opened via #results-... or #poll-...
+  const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '';
+  const pollIdFromHash = hash.startsWith('results-')
+    ? hash.replace('results-', '')
+    : hash.startsWith('poll-')
+    ? hash.replace('poll-', '')
+    : null;
+
+  const targetId = paramPollId || pollIdFromHash;
+
+  // Resolve target poll from route param, hash parameter, activePoll, or available polls
+  const poll =
+    (targetId ? (getPollById(targetId) || getPollById(`poll-${targetId}`)) : null) ||
+    activePoll ||
+    (polls && polls.length > 0 ? polls[0] : null);
+
+  const pollId = poll?.id || targetId;
+
+  // Fetch poll from backend if not yet in state
+  useEffect(() => {
+    if (targetId && !getPollById(targetId) && fetchPollById) {
+      fetchPollById(targetId);
+    }
+  }, [targetId, getPollById, fetchPollById]);
+
+  // Synchronize activePollId if opened directly via URL route or hash
+  useEffect(() => {
+    if (poll && setActivePollId && (!activePoll || activePoll.id !== poll.id)) {
+      setActivePollId(poll.id);
+    }
+  }, [poll, activePoll, setActivePollId]);
+
+  // Initial Data: Fetch latest poll results from MongoDB on mount
+  useEffect(() => {
+    if (pollId && fetchPollById) {
+      fetchPollById(pollId);
+    }
+  }, [pollId]);
+
+  // Real-Time Transport: Establish WebSocket connection to Go/Gin backend
+  useEffect(() => {
+    if (!pollId) return;
+
+    let isMounted = true;
+    let ws = null;
+    let reconnectTimer = null;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname || 'localhost';
+    const wsUrl = `${protocol}//${host}:8080/ws/polls/${pollId}`;
+
+    const connect = () => {
+      try {
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          if (!isMounted) return;
+          setWsConnected(true);
+        };
+
+        ws.onmessage = (event) => {
+          if (!isMounted) return;
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'poll_results_updated' && data.pollId === pollId) {
+              // MongoDB is the single source of truth: re-fetch latest poll state
+              fetchPollById(pollId);
+              setLastSyncTime(
+                new Date().toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })
+              );
+            }
+          } catch (err) {
+            console.error('Error processing WebSocket message:', err);
+          }
+        };
+
+        ws.onerror = () => {
+          if (isMounted) setWsConnected(false);
+        };
+
+        ws.onclose = () => {
+          if (!isMounted) return;
+          setWsConnected(false);
+          // Reconnect with backoff
+          reconnectTimer = setTimeout(connect, 3000);
+        };
+      } catch (err) {
+        if (isMounted) {
+          setWsConnected(false);
+          reconnectTimer = setTimeout(connect, 3000);
+        }
+      }
+    };
+
+    connect();
+
+    return () => {
+      isMounted = false;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) {
+        ws.onclose = null; // Prevent reconnect callback on unmount
+        ws.close();
+      }
+    };
+  }, [pollId, fetchPollById]);
+
+  if (!poll) {
+    return (
+      <div className="live-results-page animate-fade-in">
+        <div className="results-header-container">
+          <h1>No Poll Selected</h1>
+          <p>Please select or open a poll to view real-time results.</p>
+          <Button variant="primary" onClick={() => onNavigate('dashboard')}>
+            Go to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Find leader option
-  const leaderOption = [...(poll.options || [])].sort((a, b) => b.votes - a.votes)[0];
+  const sortedOptions = [...(poll.options || [])].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+  const leaderOption = sortedOptions[0];
+  const runnerUpOption = sortedOptions[1];
+  const leadingMargin = leaderOption && runnerUpOption
+    ? Math.max(0, (leaderOption.percentage || 0) - (runnerUpOption.percentage || 0))
+    : (leaderOption?.percentage || 0);
 
-  const handleManualRefresh = () => {
+  const handleManualRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      setLastSyncTime('Just now');
-      showToast('Live results synchronized!', 'info');
-    }, 600);
+    if (pollId && fetchPollById) {
+      await fetchPollById(pollId);
+    }
+    setIsRefreshing(false);
+    setLastSyncTime(
+      new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    );
+    showToast('Live results synchronized with MongoDB!', 'info');
   };
 
   return (
@@ -57,7 +183,8 @@ export const LiveResultsPage = ({ onNavigate }) => {
               <span className="pulse-dot" /> LIVE RESULTS 🔴
             </span>
             <span className="sync-status-badge">
-              <RadioIcon size={14} className="inline-icon" /> Real-time active
+              <RadioIcon size={14} className="inline-icon" />{' '}
+              {wsConnected ? 'Real-time active' : 'Connecting real-time...'}
             </span>
           </div>
           <h1 className="results-poll-title">{poll.question}</h1>
@@ -86,7 +213,7 @@ export const LiveResultsPage = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Realtime Stream Status Banner (Visual indicator for future WebSocket/Redis connection) */}
+      {/* Realtime Stream Status Banner */}
       <div className="realtime-indicator-banner glass-panel">
         <div className="indicator-left">
           <div className="indicator-pulse-ring">
@@ -94,13 +221,19 @@ export const LiveResultsPage = ({ onNavigate }) => {
             <span className="pulse-core" />
           </div>
           <div className="indicator-text">
-            <span className="indicator-heading">Auto-refresh active • WebSocket channel open</span>
-            <span className="indicator-sub">Sub-second response delivery • Last synced: {lastSyncTime}</span>
+            <span className="indicator-heading">
+              {wsConnected
+                ? 'Auto-refresh active • WebSocket channel open'
+                : 'Connecting to Real-time Stream...'}
+            </span>
+            <span className="indicator-sub">
+              Sub-second response delivery • Last synced: {lastSyncTime}
+            </span>
           </div>
         </div>
         <div className="indicator-right">
           <span className="indicator-votes-total">
-            <strong>{poll.totalVotes}</strong> total votes
+            <strong>{poll.totalVotes || 0}</strong> total votes
           </span>
         </div>
       </div>
@@ -115,19 +248,19 @@ export const LiveResultsPage = ({ onNavigate }) => {
               <span className="results-options-count">{poll.options?.length || 0} Options</span>
             </div>
             <div className="results-total-pill">
-              <UsersIcon size={14} className="inline-icon" /> {poll.totalVotes} total votes
+              <UsersIcon size={14} className="inline-icon" /> {poll.totalVotes || 0} total votes
             </div>
           </div>
 
           <div className="results-bars-list">
-            {poll.options.map((option) => (
+            {(poll.options || []).map((option) => (
               <ProgressBar
                 key={option.id}
                 label={option.text}
-                percentage={option.percentage}
-                votes={option.votes}
+                percentage={option.percentage || 0}
+                votes={option.votes || 0}
                 color={option.color || '#8b5cf6'}
-                isLeader={leaderOption && leaderOption.id === option.id}
+                isLeader={leaderOption && leaderOption.id === option.id && (poll.totalVotes || 0) > 0}
               />
             ))}
           </div>
@@ -137,8 +270,14 @@ export const LiveResultsPage = ({ onNavigate }) => {
             <div className="results-leader-summary">
               <CheckCircleIcon size={16} className="text-success" />
               <span>
-                <strong>{leaderOption?.text}</strong> is currently leading with{' '}
-                <strong>{leaderOption?.percentage}%</strong> of all votes.
+                {(poll.totalVotes || 0) > 0 && leaderOption ? (
+                  <>
+                    <strong>{leaderOption.text}</strong> is currently leading with{' '}
+                    <strong>{leaderOption.percentage}%</strong> of all votes.
+                  </>
+                ) : (
+                  'No votes recorded yet. Be the first to participate!'
+                )}
               </span>
             </div>
             <Button
@@ -155,13 +294,13 @@ export const LiveResultsPage = ({ onNavigate }) => {
         <div className="results-sidebar-col">
           <Card className="summary-stat-card glass-panel">
             <span className="summary-stat-label">Total Participation</span>
-            <div className="summary-stat-number">{poll.totalVotes}</div>
-            <p className="summary-stat-sub">110 total votes recorded so far</p>
+            <div className="summary-stat-number">{poll.totalVotes || 0}</div>
+            <p className="summary-stat-sub">{poll.totalVotes || 0} total votes recorded so far</p>
             <div className="summary-stat-divider" />
             <div className="summary-stat-metric">
               <span>Leading Margin:</span>
               <strong className="text-primary">
-                +{leaderOption ? leaderOption.percentage - (poll.options[1]?.percentage || 0) : 0}%
+                +{(poll.totalVotes || 0) > 0 ? leadingMargin : 0}%
               </strong>
             </div>
           </Card>
@@ -169,7 +308,9 @@ export const LiveResultsPage = ({ onNavigate }) => {
           <Card className="summary-stat-card glass-panel">
             <h4 className="summary-stat-label">Poll Status</h4>
             <div className="poll-status-row">
-              <Badge variant="live">LIVE & ACCEPTING</Badge>
+              <Badge variant={poll.status === 'closed' ? 'closed' : 'live'}>
+                {poll.status === 'closed' ? 'CLOSED' : 'LIVE & ACCEPTING'}
+              </Badge>
             </div>
             <p className="summary-stat-sub mt-2">
               Audience access is unrestricted. Direct URL and QR codes are active.

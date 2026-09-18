@@ -290,3 +290,25 @@ export const InfoIcon = (props) => (
     <line x1="12" y1="8" x2="12.01" y2="8" />
   </IconBase>
 );
+
+export const ShieldIcon = (props) => (
+  <IconBase {...props}>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </IconBase>
+);
+
+export const SmartphoneIcon = (props) => (
+  <IconBase {...props}>
+    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+    <line x1="12" y1="18" x2="12.01" y2="18" />
+  </IconBase>
+);
+
+export const LayersIcon = (props) => (
+  <IconBase {...props}>
+    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+    <polyline points="2 17 12 22 22 17" />
+    <polyline points="2 12 12 17 22 12" />
+  </IconBase>
+);
+
