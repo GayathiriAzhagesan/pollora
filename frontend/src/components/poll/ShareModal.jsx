@@ -26,7 +26,7 @@ export const ShareModal = ({ isOpen, onClose, poll }) => {
 
   if (!poll) return null;
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
   // Generate clean React Router URL, while preserving backward compatibility
   const shareUrl = `${origin}/poll/${poll.id}`;
 

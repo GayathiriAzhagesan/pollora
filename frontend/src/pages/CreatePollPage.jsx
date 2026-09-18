@@ -149,7 +149,7 @@ export const CreatePollPage = ({ onNavigate }) => {
   const origin =
     typeof window !== 'undefined'
       ? window.location.origin
-      : 'http://localhost:5173';
+      : '';
 
   const shareableUrl = createdPoll
     ? `${origin}/poll/${createdPoll.id}`
