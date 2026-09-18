@@ -86,5 +86,10 @@ func main() {
 	// Real-time WebSocket endpoint for live poll updates
 	r.GET("/ws/polls/:id", WsPollHandler)
 
-	r.Run(":8080")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	r.Run(":" + port)
 }
+
