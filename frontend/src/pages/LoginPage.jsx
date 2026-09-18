@@ -16,6 +16,7 @@ import {
   PolloraIcon,
   GoogleIcon,
 } from '../components/common/Logo';
+import { API_URL } from '../config';
 
 export const LoginPage = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
@@ -30,7 +31,7 @@ export const LoginPage = ({ onNavigate }) => {
   useEffect(() => {
     const checkProviders = async () => {
       try {
-        const res = await fetch('http://localhost:8080/auth/providers');
+        const res = await fetch(`${API_URL}/auth/providers`);
         if (res.ok) {
           const data = await res.json();
           setIsGoogleConfigured(Boolean(data?.google?.configured));
@@ -93,7 +94,7 @@ export const LoginPage = ({ onNavigate }) => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/login', {
+      const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,7 +132,7 @@ export const LoginPage = ({ onNavigate }) => {
 
     if (!isConfigured) {
       try {
-        const res = await fetch('http://localhost:8080/auth/providers');
+        const res = await fetch(`${API_URL}/auth/providers`);
         if (res.ok) {
           const data = await res.json();
           isConfigured = Boolean(data?.google?.configured);
@@ -150,7 +151,7 @@ export const LoginPage = ({ onNavigate }) => {
       return;
     }
 
-    window.location.href = 'http://localhost:8080/auth/google';
+    window.location.href = `${API_URL}/auth/google`;
   };
 
   const handleDemoSignIn = () => {

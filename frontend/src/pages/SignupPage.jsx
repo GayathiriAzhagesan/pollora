@@ -15,6 +15,7 @@ import {
   SparklesIcon,
 } from '../assets/icons';
 import { PolloraIcon } from '../components/common/Logo';
+import { API_URL } from '../config';
 
 export const SignupPage = ({ onNavigate }) => {
   const [fullName, setFullName] = useState('');
@@ -56,7 +57,7 @@ export const SignupPage = ({ onNavigate }) => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/signup', {
+      const response = await fetch(`${API_URL}/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

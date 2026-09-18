@@ -5,8 +5,7 @@ import React, {
   useState,
 } from 'react';
 import { INITIAL_POLLS } from '../services/mockData';
-
-const API_URL = 'http://localhost:8080';
+import { API_URL } from '../config';
 
 const PollContext = createContext();
 

@@ -16,6 +16,7 @@ import {
   BarChartIcon,
   CheckCircleIcon,
 } from '../assets/icons';
+import { WS_URL } from '../config';
 
 export const LiveResultsPage = ({ onNavigate }) => {
   const { activePoll, polls, getPollById, fetchPollById, openShareModal, setActivePollId } = usePolls();
@@ -72,9 +73,7 @@ export const LiveResultsPage = ({ onNavigate }) => {
     let ws = null;
     let reconnectTimer = null;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname || 'localhost';
-    const wsUrl = `${protocol}//${host}:8080/ws/polls/${pollId}`;
+    const wsUrl = `${WS_URL}/ws/polls/${pollId}`;
 
     const connect = () => {
       try {
