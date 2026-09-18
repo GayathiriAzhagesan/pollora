@@ -1,138 +1,237 @@
 # Pollora — Real-Time Live Polling Platform
 
-A high-performance, real-time live polling and audience engagement platform built with **React**, **Go (Gin)**, **MongoDB**, and **Redis Pub/Sub**.
+A real-time live polling and audience engagement platform built with **React**, **Go (Gin)**, **MongoDB**, **Redis Pub/Sub**, and **WebSockets**.
+
+## 🌐 Live Demo
+
+* **Frontend:** https://pollora-wheat.vercel.app/
+* **Backend:** https://pollora-backend.onrender.com/
+* **GitHub:** https://github.com/GayathiriAzhagesan/pollora
 
 ---
 
-## 🌟 Overview & Core Flow
+## 🌟 Overview
 
-1. **Create Poll**: Presenters create single or multi-choice polls with live preview.
-2. **Share Instantly**: Presenters share canonical links (`/poll/:id`), dynamic QR codes, or one-click social links (WhatsApp, LinkedIn, X/Twitter, Email).
-3. **Audience Votes**: Participants vote seamlessly on any mobile or desktop browser without requiring an account.
-4. **Watch Results Stream Live**: As votes come in, the presenter and audience see results update live in sub-seconds with **no page refresh needed**.
+Pollora allows presenters to create and share live polls while audiences participate instantly from any mobile or desktop browser.
+
+### Core Flow
+
+1. **Create Poll** — Presenters create single-choice or multi-choice polls with a live preview.
+2. **Share Instantly** — Polls can be shared using canonical links, QR codes, or social sharing options.
+3. **Audience Votes** — Participants can vote without creating an account.
+4. **Live Results** — Results update in real time without requiring a page refresh.
 
 ---
 
-## 🛠️ Required Tech Stack
+## ✨ Key Features
 
-| Layer | Technology | Purpose in Project |
-|---|---|---|
-| **Frontend** | React 18 + Vite + React Router | Dynamic single-page application, responsive layout, interactive charts, real-time state |
-| **Backend** | Go 1.23 + Gin Web Framework | High-throughput REST API, JWT authentication, server-side validation, WebSocket connection manager |
-| **Database** | MongoDB | Persistent source of truth for users and polls, using atomic `$inc` operations for vote counts |
-| **Realtime** | Redis Pub/Sub | Distributed message broker driving real-time vote updates across instances and WebSocket clients |
+* 🔐 Email/password authentication
+* 🔵 Google OAuth login
+* 📊 Single-choice and multi-choice polls
+* 🔗 Shareable poll links
+* 📱 Responsive mobile and desktop experience
+* 📷 Dynamic QR-code sharing
+* ⚡ Real-time vote updates
+* 🔄 WebSocket-based live results
+* 🚀 Redis Pub/Sub for real-time event distribution
+* 🗄️ MongoDB persistent data storage
+* 🛡️ Server-side validation
+* 🔑 JWT authentication
+* 🔒 bcrypt password hashing
+* 🎯 Public voting without requiring an account
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer          | Technology                     | Purpose                                           |
+| -------------- | ------------------------------ | ------------------------------------------------- |
+| Frontend       | React 18 + Vite + React Router | SPA, UI, routing and real-time state              |
+| Backend        | Go 1.23 + Gin                  | REST API, authentication and WebSocket management |
+| Database       | MongoDB                        | Users, polls and vote persistence                 |
+| Realtime       | Redis Pub/Sub + WebSockets     | Real-time vote event distribution                 |
+| Authentication | JWT + Google OAuth             | Secure user authentication                        |
+| Deployment     | Vercel + Render                | Frontend and backend hosting                      |
 
 ---
 
 ## 🏗️ Architecture & Real-Time Flow
 
-```
-   [ Audience Browser ] ───( PATCH /polls/:id/vote )───┐
-                                                       │
-                                                       ▼
-                                            [ Go / Gin Backend ]
-                                                       │
-                           ┌───────────────────────────┴───────────────────────────┐
-                           │ (1) Atomic Persistence                                │ (2) Real-Time Broadcast
-                           ▼                                                       ▼
-                  [ MongoDB Database ]                                    [ Redis Pub/Sub ]
-             $inc: {"options.$.votes": 1}                               PUBLISH poll:<pollID>
-                                                                                   │
-                                                                                   ▼
-                                                                           SUBSCRIBE poll:*
-                                                                                   │
-                                                                                   ▼
-                                                                        [ Go WebSocket Hub ]
-                                                                                   │
-                                                                 ws.WriteMessage(poll_updated)
-                                                                                   │
-                                                                                   ▼
-                                                                       [ Live Results Page ]
-                                                                   (Updates live with no reload)
+```text
+[ Audience Browser ]
+        |
+        | PATCH /polls/:id/vote
+        v
+[ Go / Gin Backend ]
+        |
+        +---------------------------+
+        |                           |
+        | Atomic Persistence        | Real-Time Broadcast
+        v                           v
+[ MongoDB ]                  [ Redis Pub/Sub ]
+        |                           |
+        |                           v
+        |                    [ WebSocket Hub ]
+        |                           |
+        |                           v
+        +------------------> [ Live Results ]
+                                  |
+                           Updates without reload
 ```
 
 ### Why Redis Pub/Sub + WebSockets?
-- **True Real-Time**: Standard polling wastes bandwidth and adds latency. WebSockets maintain persistent, low-overhead connections to connected viewers.
-- **Horizontal Scalability**: A standalone WebSocket server only knows about clients connected to that specific instance. By routing vote events through **Redis Pub/Sub**, any backend instance can publish a vote and notify all connected WebSocket subscribers across any number of server nodes.
-- **MongoDB as Source of Truth**: Vote increments are executed atomically using MongoDB's `$inc` operator, preventing race conditions. Redis is used for high-speed message distribution.
 
----
+**WebSockets** maintain persistent connections between the server and connected clients, allowing vote updates to reach viewers without repeated page polling.
 
-## 🚀 How to Run Locally
+**Redis Pub/Sub** provides a message-broker layer for distributing vote events between backend processes and connected WebSocket clients.
 
-### 1. Prerequisites
-- [Go](https://go.dev/dl/) (v1.22+)
-- [Node.js](https://nodejs.org/) (v18+)
-- [MongoDB](https://www.mongodb.com/) running locally on port `27017` or a MongoDB Atlas connection URI
-- [Redis](https://redis.io/) running locally on port `6379` (or an Upstash Redis URL)
-
-### 2. Backend Setup
-```bash
-cd backend
-
-# Create .env from the example template
-cp .env.example .env
-
-# Run the Go server
-go run .
-```
-The Go Gin backend will start on `http://localhost:8080`.
-*(If Redis is offline, the backend gracefully falls back to local in-memory broadcasting while notifying you in the console).*
-
-### 3. Frontend Setup
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start Vite development server
-npm run dev
-```
-The React frontend will be available at `http://localhost:5173`.
+**MongoDB** remains the persistent source of truth for poll and vote data, with atomic update operations used for vote-count changes.
 
 ---
 
 ## 🔒 Security & Validation
 
-- **Server-Side Validation**: All incoming requests are strictly checked before touching the database:
-  - Questions must be non-empty strings.
-  - Polls require a minimum of 2 valid, non-empty options.
-  - Option IDs and MongoDB ObjectIDs are verified server-side.
-- **Authentication**: Poll creation and deletion require a valid JWT `Bearer` token issued upon signup or login. Passwords are encrypted using **bcrypt** (cost factor 10).
-- **Public Voting**: Voting and live results are publicly accessible to ensure friction-free participation for audiences.
+Pollora performs validation on the server before processing requests.
+
+### Validation
+
+* Questions must be non-empty.
+* Polls require at least two valid options.
+* Option IDs are validated server-side.
+* MongoDB ObjectIDs are validated before database operations.
+
+### Authentication
+
+* JWT Bearer authentication protects authenticated operations.
+* Poll creation and deletion require authentication.
+* Passwords are hashed using **bcrypt**.
+* Google OAuth is supported for user authentication.
+
+### Public Voting
+
+Voting is intentionally available without requiring audience members to create an account, providing a friction-free participation experience.
 
 ---
 
-## 📁 Project Structure
+## 🚀 Running Locally
 
+### Prerequisites
+
+Install:
+
+* [Go](https://go.dev/dl/) 1.23+
+* [Node.js](https://nodejs.org/) 18+
+* [MongoDB](https://www.mongodb.com/)
+* Redis or an Upstash Redis instance
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/GayathiriAzhagesan/pollora.git
+cd pollora
 ```
-live-poll-app/
-├── backend/
-│   ├── auth.go           # Signup, login, password hashing, and token generation
-│   ├── middleware.go     # JWT Bearer authentication middleware
-│   ├── models.go         # MongoDB and API request/response structs
-│   ├── mongo.go          # MongoDB client connection
-│   ├── oauth.go          # Google OAuth authentication handlers
-│   ├── poll.go           # Poll creation, retrieval, atomic voting, deletion
-│   ├── redis.go          # Redis client, Pub/Sub subscriber, and publisher
-│   ├── websocket.go      # Gorilla WebSocket hub and connection manager
-│   └── main.go           # Gin engine routes, CORS, and entry point
-├── frontend/
-│   ├── src/
-│   │   ├── components/   # Modular UI components (Navbar, Modals, Logo, Cards)
-│   │   ├── context/      # PollContext (API & WebSocket sync) & AuthContext
-│   │   ├── pages/        # LandingPage, LoginPage, CreatePollPage, LiveResultsPage, etc.
-│   │   ├── assets/       # Icons and showcase visuals
-│   │   └── App.jsx       # React Router route declarations
-│   └── package.json
-└── README.md             # Project documentation & decisions
+
+### 2. Backend Setup
+
+```bash
+cd backend
 ```
+
+Create a `.env` file using `.env.example` and configure your MongoDB, Redis, JWT and OAuth settings.
+
+Then run:
+
+```bash
+go run .
+```
+
+The backend runs on **port 8080** by default.
+
+### 3. Frontend Setup
+
+```bash
+cd frontend
+```
+
+Create a `.env` file using `.env.example` and configure:
+
+```text
+VITE_API_URL=http://localhost:8080
+```
+
+Then run:
+
+```bash
+npm install
+npm run dev
+```
+
+The frontend runs on **port 5173** by default.
+
+### 4. Access Pollora
+
+* Open **Frontend URL**: [http://localhost:5173](http://localhost:5173)
+* Backend API: [http://localhost:8080](http://localhost:8080)
 
 ---
 
-## 💡 Key Decisions & Evaluation Highlights
+## 📤 Deployment Status
 
-1. **Sub-second Realtime UI**: Built around WebSockets and Redis Pub/Sub so presentations on large screens update instantly when attendees submit votes from their phones.
-2. **SurveyMars-Style Showcase UX**: High-tier SaaS design featuring keynote wall presentation modes, zero-app mobile voting experiences, and a live interactive voter simulator on the homepage.
-3. **Graceful Fallbacks**: The system actively checks for Redis connectivity; if Redis is temporarily unreachable in a local dev environment, it seamlessly routes updates through an internal memory bus so developers are never blocked.
+| Component | URL | Status |
+| --------- | --- | ------ |
+| Frontend | https://pollora-wheat.vercel.app/ | ✅ Live |
+| Backend | https://pollora-backend.onrender.com/ | ✅ Live |
+
+---
+
+## 📄 License
+
+[MIT License](LICENSE)
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feat/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feat/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 👨‍💻 Authors
+
+* **Gayathiri Azhagesan** - [GitHub](https://github.com/GayathiriAzhagesan)
+
+---
+
+## 🙏 Acknowledgments
+
+* Gin Framework - Go web framework
+* React + Vite - Frontend framework
+* MongoDB - NoSQL database
+* Redis - In-memory data store & message broker
+* JWT - Authentication
+* bcrypt - Password hashing
+
+---
+
+## 📚 References & Resources
+
+* [Go Gin Documentation](https://gin-gonic.com/docs/)
+* [React Router Documentation](https://reactrouter.com/)
+* [MongoDB Documentation](https://docs.mongodb.com/)
+* [Redis Pub/Sub Documentation](https://redis.io/docs/manual/pubsub/)
+* [WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API)
+
+---
+
+## 🏁 Support & Next Steps
+
+* **Need production-ready features?** Consider private polls, live countdowns, advanced analytics, and multi-language support.
+* **Questions or issues?** Open an issue or contact the maintainers.
+
+---
+
+### Built with 💜 using Pollora
