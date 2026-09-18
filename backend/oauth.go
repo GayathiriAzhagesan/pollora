@@ -17,13 +17,41 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-// getFrontendURL returns the frontend base URL from env or defaults to http://localhost:5173
+// getFrontendURL returns the frontend base URL from FRONTEND_URL env var,
+// defaulting to https://pollora-wheat.vercel.app in production (or http://localhost:5173 for local development)
 func getFrontendURL() string {
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		frontendURL = "http://localhost:5173"
+	frontendURL := strings.TrimSpace(os.Getenv("FRONTEND_URL"))
+	if frontendURL != "" {
+		return strings.TrimRight(frontendURL, "/")
 	}
-	return strings.TrimRight(frontendURL, "/")
+	// Fallback to production frontend so production OAuth redirects never point to localhost
+	return "https://pollora-wheat.vercel.app"
+}
+
+// getGoogleRedirectURI returns the OAuth callback URI for Google
+func getGoogleRedirectURI() string {
+	redirectURI := strings.TrimSpace(os.Getenv("GOOGLE_REDIRECT_URL"))
+	if redirectURI != "" {
+		return redirectURI
+	}
+	frontendURL := strings.TrimSpace(os.Getenv("FRONTEND_URL"))
+	if strings.Contains(frontendURL, "localhost") || strings.Contains(frontendURL, "127.0.0.1") {
+		return "http://localhost:8080/auth/google/callback"
+	}
+	return "https://pollora-backend.onrender.com/auth/google/callback"
+}
+
+// getMicrosoftRedirectURI returns the OAuth callback URI for Microsoft
+func getMicrosoftRedirectURI() string {
+	redirectURI := strings.TrimSpace(os.Getenv("MICROSOFT_REDIRECT_URL"))
+	if redirectURI != "" {
+		return redirectURI
+	}
+	frontendURL := strings.TrimSpace(os.Getenv("FRONTEND_URL"))
+	if strings.Contains(frontendURL, "localhost") || strings.Contains(frontendURL, "127.0.0.1") {
+		return "http://localhost:8080/auth/microsoft/callback"
+	}
+	return "https://pollora-backend.onrender.com/auth/microsoft/callback"
 }
 
 // AuthProvidersHandler returns which OAuth providers are configured
@@ -47,7 +75,7 @@ func AuthProvidersHandler(c *gin.Context) {
 func GoogleAuthHandler(c *gin.Context) {
 	clientID := strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID"))
 	clientSecret := strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET"))
-	redirectURI := strings.TrimSpace(os.Getenv("GOOGLE_REDIRECT_URL"))
+	redirectURI := getGoogleRedirectURI()
 
 	if clientID == "" || clientSecret == "" {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -55,10 +83,6 @@ func GoogleAuthHandler(c *gin.Context) {
 			"message": "Please configure GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URL in the backend environment variables.",
 		})
 		return
-	}
-
-	if redirectURI == "" {
-		redirectURI = "http://localhost:8080/auth/google/callback"
 	}
 
 	authURL := fmt.Sprintf(
@@ -85,10 +109,7 @@ func GoogleCallbackHandler(c *gin.Context) {
 
 	clientID := strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID"))
 	clientSecret := strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET"))
-	redirectURI := strings.TrimSpace(os.Getenv("GOOGLE_REDIRECT_URL"))
-	if redirectURI == "" {
-		redirectURI = "http://localhost:8080/auth/google/callback"
-	}
+	redirectURI := getGoogleRedirectURI()
 
 	// Exchange authorization code for tokens
 	tokenResp, err := http.PostForm("https://oauth2.googleapis.com/token", url.Values{
@@ -174,7 +195,7 @@ func GoogleCallbackHandler(c *gin.Context) {
 	}
 
 	redirectURL := fmt.Sprintf(
-		"%s/login?oauth_token=%s&user_id=%s&user_name=%s&user_email=%s",
+		"%s/dashboard?oauth_token=%s&user_id=%s&user_name=%s&user_email=%s",
 		frontendURL,
 		url.QueryEscape(token),
 		url.QueryEscape(user.ID.Hex()),
@@ -188,7 +209,7 @@ func GoogleCallbackHandler(c *gin.Context) {
 func MicrosoftAuthHandler(c *gin.Context) {
 	clientID := strings.TrimSpace(os.Getenv("MICROSOFT_CLIENT_ID"))
 	clientSecret := strings.TrimSpace(os.Getenv("MICROSOFT_CLIENT_SECRET"))
-	redirectURI := strings.TrimSpace(os.Getenv("MICROSOFT_REDIRECT_URL"))
+	redirectURI := getMicrosoftRedirectURI()
 
 	if clientID == "" || clientSecret == "" {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -196,10 +217,6 @@ func MicrosoftAuthHandler(c *gin.Context) {
 			"message": "Please configure MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, and MICROSOFT_REDIRECT_URL in the backend environment variables.",
 		})
 		return
-	}
-
-	if redirectURI == "" {
-		redirectURI = "http://localhost:8080/auth/microsoft/callback"
 	}
 
 	authURL := fmt.Sprintf(
@@ -226,10 +243,7 @@ func MicrosoftCallbackHandler(c *gin.Context) {
 
 	clientID := strings.TrimSpace(os.Getenv("MICROSOFT_CLIENT_ID"))
 	clientSecret := strings.TrimSpace(os.Getenv("MICROSOFT_CLIENT_SECRET"))
-	redirectURI := strings.TrimSpace(os.Getenv("MICROSOFT_REDIRECT_URL"))
-	if redirectURI == "" {
-		redirectURI = "http://localhost:8080/auth/microsoft/callback"
-	}
+	redirectURI := getMicrosoftRedirectURI()
 
 	tokenResp, err := http.PostForm("https://login.microsoftonline.com/common/oauth2/v2.0/token", url.Values{
 		"client_id":     {clientID},
@@ -323,7 +337,7 @@ func MicrosoftCallbackHandler(c *gin.Context) {
 	}
 
 	redirectURL := fmt.Sprintf(
-		"%s/login?oauth_token=%s&user_id=%s&user_name=%s&user_email=%s",
+		"%s/dashboard?oauth_token=%s&user_id=%s&user_name=%s&user_email=%s",
 		frontendURL,
 		url.QueryEscape(token),
 		url.QueryEscape(user.ID.Hex()),

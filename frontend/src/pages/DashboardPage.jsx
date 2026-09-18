@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { PollCard } from '../components/poll/PollCard';
@@ -26,6 +26,19 @@ export const DashboardPage = ({ onNavigate }) => {
     openShareModal,
   } = usePolls();
   const { showToast } = useToast();
+
+  // Show welcome toast if redirected here from OAuth login
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('oauth_welcome')) {
+      sessionStorage.removeItem('oauth_welcome');
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        showToast(`Welcome back, ${user.name || 'User'}! Signed in successfully.`, 'success');
+      } catch {
+        showToast('Signed in successfully!', 'success');
+      }
+    }
+  }, [showToast]);
 
   const handleViewResults = (pollId) => {
     setActivePollId(pollId);

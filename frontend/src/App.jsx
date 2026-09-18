@@ -24,6 +24,32 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 
 // Protected Route component to guard authenticated views
 const ProtectedRoute = ({ children }) => {
+  // Check for incoming OAuth token callback directly on /dashboard (?oauth_token=...)
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('error');
+    if (oauthError) {
+      return <Navigate to={`/login?error=${encodeURIComponent(oauthError)}`} replace />;
+    }
+
+    const oauthToken = params.get('oauth_token');
+    if (oauthToken) {
+      const user = {
+        id: params.get('user_id') || '',
+        name: params.get('user_name') || 'User',
+        email: params.get('user_email') || '',
+      };
+      localStorage.setItem('token', oauthToken);
+      localStorage.setItem('user', JSON.stringify(user));
+      sessionStorage.setItem('oauth_welcome', '1');
+      window.dispatchEvent(new Event('authChange'));
+
+      // Clean query parameters from URL without reloading the page
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  }
+
   const token = localStorage.getItem('token');
   if (!token || token === 'null' || token === 'undefined') {
     return <Navigate to="/login" replace />;
